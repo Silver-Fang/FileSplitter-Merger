@@ -93,16 +93,36 @@ Public NotInheritable Class MainPage
 		输出浏览.IsEnabled = False
 		开始拆分.IsEnabled = False
 		进度条.Value = 0
-		进度条.Maximum = 拆分数 * 2
-		Dim c As ULong = (Await b).Size, d As Stream = Await a, g(c / 拆分数) As Byte, h As ULong
-		For f As Byte = 0 To 拆分数 - 1
-			h = (c / (拆分数 - f))
-			Await d.ReadAsync(g, 0, h)
-			进度条.Value += 1
-			Await (Await (Await 选定目录.CreateFileAsync(选定文件.Name & "." & f)).OpenStreamForWriteAsync).WriteAsync(g, 0, h)
-			进度条.Value += 1
-			c -= h
-		Next
+		Dim c As ULong = (Await b).Size, d As Stream = Await a, i As ULong = c / 拆分数
+		If i > Integer.MaxValue / 2 Then
+			Dim g As UInteger = Math.Ceiling(i * 2 / Integer.MaxValue), h(i / g) As Byte, j As ULong, k As Stream, m As UInteger
+			进度条.Maximum = g * 拆分数 * 2
+			For f As Byte = 0 To 拆分数 - 1
+				j = c / (拆分数 - f)
+				c -= j
+				k = Await (Await 选定目录.CreateFileAsync(选定文件.Name & "." & f, CreationCollisionOption.ReplaceExisting)).OpenStreamForWriteAsync
+				For l As UInteger = 0 To g - 1
+					m = j / (g - l)
+					j -= m
+					Await d.ReadAsync(h, 0, m)
+					进度条.Value += 1
+					Await k.WriteAsync(h, 0, m)
+					进度条.Value += 1
+				Next
+				k.Close()
+			Next
+		Else
+			进度条.Maximum = 拆分数 * 2
+			Dim g(i) As Byte, h As UInteger
+			For f As Byte = 0 To 拆分数 - 1
+				h = c / (拆分数 - f)
+				c -= h
+				Await d.ReadAsync(g, 0, h)
+				进度条.Value += 1
+				Await (Await (Await 选定目录.CreateFileAsync(选定文件.Name & "." & f)).OpenStreamForWriteAsync).WriteAsync(g, 0, h)
+				进度条.Value += 1
+			Next
+		End If
 		d.Close()
 		输入浏览.IsEnabled = True
 		输出浏览.IsEnabled = True
